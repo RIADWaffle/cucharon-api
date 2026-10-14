@@ -1,0 +1,15 @@
+.git
+.github
+.venv
+.env
+.env.*
+!.env.example
+.storage
+.pytest_cache
+.ruff_cache
+**/__pycache__
+tests
+docs
+scripts
+openapi.json
+Dockerfile
