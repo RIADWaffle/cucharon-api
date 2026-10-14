@@ -1,0 +1,146 @@
+"""users
+
+Revision ID: 4a9e2e0339d5
+Revises:
+Create Date: 2026-10-14 16:34:47.490393+00:00
+
+"""
+
+from collections.abc import Sequence
+
+import sqlalchemy as sa
+from alembic import op
+
+# revision identifiers, used by Alembic.
+revision: str = "4a9e2e0339d5"
+down_revision: str | Sequence[str] | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+
+def upgrade() -> None:
+    """Upgrade schema."""
+    # Enums como VARCHAR + CHECK con nombre (ADR 0001). Revisada a mano: autogenerate
+    # duplicaba los CHECK de sa.Enum(create_constraint=True).
+    op.create_table(
+        "users",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("email", sa.String(length=320), nullable=False),
+        sa.Column("password_hash", sa.Text(), nullable=False),
+        sa.Column("is_active", sa.Boolean(), server_default=sa.text("true"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.CheckConstraint("email = lower(email)", name=op.f("ck_users_email_lowercase")),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_users")),
+        sa.UniqueConstraint("email", name=op.f("uq_users_email")),
+    )
+    op.create_table(
+        "refresh_tokens",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("family_id", sa.Uuid(), nullable=False),
+        sa.Column("token_hash", sa.String(length=64), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("replaced_by", sa.Uuid(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(
+            ["replaced_by"],
+            ["refresh_tokens.id"],
+            name=op.f("fk_refresh_tokens_replaced_by_refresh_tokens"),
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["users.id"],
+            name=op.f("fk_refresh_tokens_user_id_users"),
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_refresh_tokens")),
+        sa.UniqueConstraint("token_hash", name=op.f("uq_refresh_tokens_token_hash")),
+    )
+    op.create_index(
+        op.f("ix_refresh_tokens_family_id"), "refresh_tokens", ["family_id"], unique=False
+    )
+    op.create_index(op.f("ix_refresh_tokens_user_id"), "refresh_tokens", ["user_id"], unique=False)
+    op.create_table(
+        "user_profiles",
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("display_name", sa.String(length=100), nullable=True),
+        sa.Column("birth_date", sa.Date(), nullable=True),
+        sa.Column(
+            "sex",
+            sa.String(length=32),
+            nullable=True,
+        ),
+        sa.Column("height_cm", sa.Numeric(precision=4, scale=1), nullable=True),
+        sa.Column(
+            "activity_level",
+            sa.String(length=32),
+            nullable=True,
+        ),
+        sa.Column("timezone", sa.String(length=64), nullable=False),
+        sa.Column(
+            "unit_system",
+            sa.String(length=32),
+            server_default="metric",
+            nullable=False,
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.CheckConstraint(
+            "activity_level IN ('sedentary', 'light', 'moderate', 'active', 'very_active')",
+            name=op.f("ck_user_profiles_activity_level"),
+        ),
+        sa.CheckConstraint("sex IN ('male', 'female')", name=op.f("ck_user_profiles_sex")),
+        sa.CheckConstraint(
+            "unit_system IN ('metric', 'imperial')", name=op.f("ck_user_profiles_unit_system")
+        ),
+        sa.CheckConstraint(
+            "height_cm > 0 AND height_cm < 300", name=op.f("ck_user_profiles_height_cm_range")
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["users.id"],
+            name=op.f("fk_user_profiles_user_id_users"),
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("user_id", name=op.f("pk_user_profiles")),
+    )
+    # ### end Alembic commands ###
+
+
+def downgrade() -> None:
+    """Downgrade schema."""
+    # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table("user_profiles")
+    op.drop_index(op.f("ix_refresh_tokens_user_id"), table_name="refresh_tokens")
+    op.drop_index(op.f("ix_refresh_tokens_family_id"), table_name="refresh_tokens")
+    op.drop_table("refresh_tokens")
+    op.drop_table("users")
+    # ### end Alembic commands ###
