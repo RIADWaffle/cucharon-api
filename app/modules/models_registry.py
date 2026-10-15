@@ -3,4 +3,5 @@
 Solo lo usan Alembic y los tests. Ningún módulo debe importar este archivo.
 """
 
+from app.modules.products import models as products_models  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from app.modules.users import models as users_models  # noqa: F401  # pyright: ignore[reportUnusedImport]
