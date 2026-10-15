@@ -108,6 +108,7 @@ uv run uvicorn app.main:app --reload
 uv run ruff check . && uv run ruff format --check .
 uv run pyright
 uv run pytest -m "not external" tests/unit tests/integration tests/e2e
+uv run pytest -m "not external and not slow" tests/unit tests/integration tests/e2e  # local rápido; CI sí corre `slow`
 uv run pytest tests/smoke              # requiere SMOKE_BASE_URL
 uv run pytest -m external tests/contract
 uv run alembic upgrade head

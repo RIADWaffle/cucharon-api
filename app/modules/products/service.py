@@ -230,6 +230,8 @@ async def _upsert_from_barcode(
 ) -> Product:
     """INSERT ... ON CONFLICT: dos escaneos simultáneos del mismo código no truenan.
 
+    Funciona porque `uq_products_source_external_id` es el ÚNICO índice único además
+    de la PK (ON CONFLICT solo arbitra uno). Ver ADR 0006 (D5).
     El lookup por barcode es autoritativo: reemplaza lo que hubiera.
     """
     if data.source == "off":

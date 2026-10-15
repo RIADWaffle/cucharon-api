@@ -69,6 +69,7 @@ asyncio_default_test_loop_scope = "session"
 markers = [
     "external: le pega a servicios reales de terceros (contract tests); no corre en CI",
     "smoke: le pega a SMOKE_BASE_URL desplegado",
+    "slow: tarda (p. ej. carreras repetidas); CI sí lo corre, local se puede saltar",
 ]
 addopts = "-ra --strict-markers"
 filterwarnings = ["error::DeprecationWarning:app.*"]

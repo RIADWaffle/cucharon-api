@@ -62,7 +62,7 @@ Documentación oficial más requests reales con nuestro User-Agent. "Observado" 
 
 ### D2. Solo OFF resuelve códigos
 - USDA se usa para genéricos; su `get_by_barcode` regresa `None`. USDA Branded repite el mismo `gtinUpc` en varios `fdcId`, así que un unique por barcode tronaría.
-- Invariante en la DB (CHECK `barcode_only_off`): `barcode IS NULL OR (source = 'off' AND external_id = barcode)`. Con esto, `barcode` unique y `(source, external_id)` unique nunca chocan entre sí.
+- Invariante en la DB (CHECK `barcode_only_off`): `barcode IS NULL OR (source = 'off' AND external_id = barcode)`. Junto con unique `(source, external_id)`, esto **ya garantiza que `barcode` es único**: dos filas con el mismo código serían las dos `off` con el mismo `external_id`. Por eso `barcode` lleva un índice **no único** (`ix_products_barcode`), solo para buscar. Ver D5.
 
 ### D3. Caché positiva
 - **Dentro de `PRODUCTS_CACHE_TTL_DAYS` (30):** se responde sin llamar al provider.
@@ -78,8 +78,11 @@ Documentación oficial más requests reales con nuestro User-Agent. "Observado" 
 - Un custom del usuario con ese código se revisa antes que la caché negativa.
 
 ### D5. Concurrencia
-- **Barcode:** `INSERT … ON CONFLICT (source, external_id) DO UPDATE … RETURNING`. Por D2, ese conflicto cubre también el del barcode. Hay un integration test con dos sesiones reales en paralelo, y sin el `ON CONFLICT` falla con `UniqueViolationError`.
-- **Búsqueda:** `INSERT … ON CONFLICT DO NOTHING` y después `SELECT … FOR UPDATE` de los que ya existían.
+- **Barcode:** `INSERT … ON CONFLICT (source, external_id) DO UPDATE … RETURNING`.
+- **Búsqueda:** `INSERT … ON CONFLICT DO NOTHING` (mismo árbitro) y después `SELECT … FOR UPDATE` de los que ya existían.
+- **Un solo índice único en `products` además de la PK.** `ON CONFLICT` solo arbitra un índice (`uq_products_source_external_id`); cualquier otro índice único se verifica de forma normal. La primera versión tenía además `uq_products_barcode`. Dos escaneos simultáneos del mismo código podían pasar los dos el chequeo del árbitro y luego chocar en ese otro índice, con `UniqueViolationError`, según el timing (falló en CI). La migración `085adeb10b5e` lo cambió por un índice no único; la unicidad la sigue garantizando D2. La PK `id` es un `uuid4` nuevo en cada insert, así que no compite.
+- **Regla:** no agregar a `products` otro índice único mientras se use `ON CONFLICT` sobre uno solo. La verifica de forma determinista `test_products_has_a_single_unique_index_besides_pk`, que lee `pg_indexes`. `product_barcode_misses` solo tiene la PK, que es su árbitro, y `user_products` no usa `ON CONFLICT` (inserta y traduce el `IntegrityError` a 409).
+- **Test:** repite la carrera 200 veces, con 4 escaneos simultáneos por código y códigos distintos, porque el choque ocurre dentro de Postgres y no se puede forzar desde el cliente. Con el índice único viejo falló 5 de 5 corridas, y sin `ON CONFLICT` falla siempre.
 
 ### D6. La búsqueda nunca degrada la caché (`domain.py::search_upsert_action`, pura)
 Cada fila guarda `fetched_via` (`barcode` | `search`). Al guardar un resultado de búsqueda sobre una fila existente:

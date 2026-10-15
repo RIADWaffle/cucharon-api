@@ -68,7 +68,10 @@ class Product(NutrientColumns, TimestampMixin, Base):
     source: Mapped[ProductSource] = mapped_column(text_enum(ProductSource, "source"))
     source_type: Mapped[str | None] = mapped_column(String(32))
     external_id: Mapped[str] = mapped_column(String(64))
-    barcode: Mapped[str | None] = mapped_column(String(14), unique=True)
+    # Índice NO único: la unicidad la garantizan el CHECK `barcode_only_off` y
+    # unique(source, external_id). Un segundo índice único rompería el ON CONFLICT
+    # (solo arbitra uno). Ver ADR 0006 (D5).
+    barcode: Mapped[str | None] = mapped_column(String(14), index=True)
     name: Mapped[str] = mapped_column(String(300))
     brand: Mapped[str | None] = mapped_column(String(200))
     source_url: Mapped[str | None] = mapped_column(String(500))

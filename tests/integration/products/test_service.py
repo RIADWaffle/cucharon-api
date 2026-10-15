@@ -34,33 +34,62 @@ NUTELLA = "3017620422003"
 NUTELLA_GTIN = "03017620422003"
 
 
+NUTELLA_NUTRIENTS = Nutrients(
+    kcal=D(539),
+    protein_g=D("6.3"),
+    carbs_g=D("57.5"),
+    fat_g=D("30.9"),
+    fiber_g=D(0),
+    sugar_g=D("56.3"),
+    sodium_mg=D("42.8"),
+)
+AVENA_NUTRIENTS = Nutrients(
+    kcal=D(389), protein_g=D("16.9"), carbs_g=D(56), fat_g=D("6.9"), fiber_g=D("10.6")
+)
+
+
 def _off(
-    code: str = NUTELLA, name: str = "Nutella", *, complete: bool = True, **changes: Any
+    code: str,
+    name: str,
+    *,
+    brand: str | None = None,
+    nutrients: Nutrients | None = None,
+    **changes: Any,
 ) -> ProductData:
-    nutrients = (
-        Nutrients(
-            kcal=D(539),
-            protein_g=D("6.3"),
-            carbs_g=D("57.5"),
-            fat_g=D("30.9"),
-            fiber_g=D(0),
-            sugar_g=D("56.3"),
-            sodium_mg=D("42.8"),
-        )
-        if complete
-        else Nutrients(kcal=D(539))
-    )
+    """Producto de OFF genérico: sin marca y con nutrientes desconocidos salvo que se pasen."""
     fields: dict[str, Any] = {
         "source": "off",
         "external_id": code,
         "name": name,
         "basis": "per_100g",
-        "nutrients": nutrients,
+        "nutrients": nutrients or Nutrients(),
         "barcode": code,
-        "brand": "Ferrero",
+        "brand": brand,
         "source_url": f"https://world.openfoodfacts.org/product/{code}",
     }
     return ProductData(**{**fields, **changes})
+
+
+def _nutella(*, complete: bool = True, name: str = "Nutella") -> ProductData:
+    nutrients = NUTELLA_NUTRIENTS if complete else Nutrients(kcal=D(539))
+    return _off(NUTELLA, name, brand="Ferrero", nutrients=nutrients)
+
+
+def _coca_cola(code: str = "5449000000996") -> ProductData:
+    return _off(
+        code,
+        "Coca-Cola",
+        brand="Coca-Cola",
+        basis="per_100ml",
+        nutrients=Nutrients(
+            kcal=D("42.4"), protein_g=D(0), carbs_g=D("10.6"), fat_g=D(0), sugar_g=D("10.6")
+        ),
+    )
+
+
+def _with_check_digit(body: str) -> str:
+    total = sum(int(d) * (3 if i % 2 == 0 else 1) for i, d in enumerate(reversed(body)))
+    return body + str((10 - total % 10) % 10)
 
 
 def _usda(fdc_id: str, name: str, *, aliases: tuple[str, ...] = ()) -> ProductData:
@@ -132,7 +161,7 @@ async def test_barcode_lookup_caches_normalized(
     db_session: AsyncSession, test_settings: Settings
 ) -> None:
     user_id = await _user(db_session)
-    provider = FakeFoodDataProvider(products=[_off()])
+    provider = FakeFoodDataProvider(products=[_nutella()])
 
     view = await _lookup_found(db_session, provider, user_id, test_settings)
     again = await _lookup_found(db_session, provider, user_id, test_settings, code="03017620422003")
@@ -173,7 +202,7 @@ async def test_negative_cache(db_session: AsyncSession, test_settings: Settings)
     assert await db_session.get(ProductBarcodeMiss, NUTELLA_GTIN) is not None
 
     # Vencida la caché negativa, se vuelve a preguntar (y ya existe).
-    provider.products.append(_off())
+    provider.products.append(_nutella())
     later = now + timedelta(hours=test_settings.products_miss_ttl_hours)
     view = await _lookup_found(db_session, provider, user_id, test_settings, now=later)
     assert view.name == "Nutella"
@@ -198,7 +227,7 @@ async def test_stale_product_is_served_when_provider_fails_and_refreshed_when_ba
 ) -> None:
     user_id = await _user(db_session)
     old = datetime.now(UTC) - timedelta(days=test_settings.products_cache_ttl_days + 1)
-    provider = FakeFoodDataProvider(products=[_off()])
+    provider = FakeFoodDataProvider(products=[_nutella()])
     first = await _lookup_found(db_session, provider, user_id, test_settings, now=old)
 
     provider.barcode_error = ProviderUnavailableError("off", "HTTP 503")
@@ -207,7 +236,7 @@ async def test_stale_product_is_served_when_provider_fails_and_refreshed_when_ba
     assert stale.id == first.id
 
     provider.barcode_error = None
-    provider.products[0] = _off(name="Nutella 2026")
+    provider.products[0] = _nutella(name="Nutella 2026")
     fresh = await _lookup_found(db_session, provider, user_id, test_settings)
     assert not fresh.stale
     assert fresh.id == first.id
@@ -219,7 +248,7 @@ async def test_product_gone_from_source_keeps_serving_cache(
 ) -> None:
     user_id = await _user(db_session)
     old = datetime.now(UTC) - timedelta(days=test_settings.products_cache_ttl_days + 1)
-    provider = FakeFoodDataProvider(products=[_off()])
+    provider = FakeFoodDataProvider(products=[_nutella()])
     first = await _lookup_found(db_session, provider, user_id, test_settings, now=old)
 
     provider.products.clear()
@@ -237,7 +266,7 @@ async def test_user_override_wins_only_for_its_owner(
 ) -> None:
     owner = await _user(db_session)
     other = await _user(db_session)
-    provider = FakeFoodDataProvider(products=[_off()])
+    provider = FakeFoodDataProvider(products=[_nutella()])
     product = await _lookup_found(db_session, provider, owner, test_settings)
 
     override = await service.create_custom(
@@ -306,39 +335,48 @@ class _BarrierProvider(FakeFoodDataProvider):
 
 @pytest.fixture
 async def committed_user(engine: AsyncEngine) -> AsyncIterator[UUID]:
+    """Usuario commiteado de verdad; al final borra lo que commitearon los tests."""
     async with AsyncSession(engine, expire_on_commit=False) as session:
+        started = await session.scalar(select(func.now()))
         user = User(email=f"{uuid4().hex}@example.com", password_hash="x")
         session.add(user)
         await session.commit()
         user_id = user.id
     yield user_id
     async with AsyncSession(engine) as session:
-        await session.execute(delete(Product).where(Product.barcode == "05449000000996"))
+        await session.execute(delete(Product).where(Product.created_at >= started))
         await session.execute(delete(User).where(User.id == user_id))
         await session.commit()
 
 
+@pytest.mark.slow
 async def test_concurrent_lookups_of_same_barcode_do_not_fail(
-    engine: AsyncEngine, committed_user: UUID, test_settings: Settings
+    pooled_engine: AsyncEngine, committed_user: UUID, test_settings: Settings
 ) -> None:
-    provider = _BarrierProvider([_off("5449000000996", "Coca-Cola")], parties=2)
+    # La carrera ocurre dentro de Postgres (dos inserts pasan el chequeo del árbitro
+    # en el mismo instante) y no se puede forzar desde aquí: se repite muchas veces
+    # con códigos distintos. Con el índice único viejo en barcode falla siempre.
+    codes = [_with_check_digit(f"750{i:09d}") for i in range(200)]
+    parallel = 4
+    provider = _BarrierProvider(
+        [_off(code, f"Producto {code}") for code in codes], parties=parallel
+    )
 
-    async def lookup() -> service.ProductView:
-        async with AsyncSession(engine, expire_on_commit=False) as session:
-            view = await _lookup_found(
-                session, provider, committed_user, test_settings, code="5449000000996"
-            )
-            await session.commit()
-            return view
+    async def lookup(code: str) -> service.ProductView:
+        async with AsyncSession(pooled_engine, expire_on_commit=False) as session:
+            return await _lookup_found(session, provider, committed_user, test_settings, code)
 
-    first, second = await asyncio.gather(lookup(), lookup())
+    for code in codes:
+        views = await asyncio.gather(*(lookup(code) for _ in range(parallel)))
+        assert len({view.id for view in views}) == 1
 
-    assert first.id == second.id
-    async with AsyncSession(engine) as session:
-        count = await session.scalar(
-            select(func.count()).where(Product.barcode == "05449000000996")
+    async with AsyncSession(pooled_engine) as session:
+        counts = await session.execute(
+            select(Product.barcode, func.count())
+            .where(Product.barcode.in_([code.zfill(14) for code in codes]))
+            .group_by(Product.barcode)
         )
-    assert count == 1
+        assert sorted(count for _, count in counts) == [1] * len(codes)
 
 
 class _PoolProbe(FakeFoodDataProvider):
@@ -360,7 +398,7 @@ class _PoolProbe(FakeFoodDataProvider):
 
 @pytest.fixture
 async def pooled_engine(postgres_url: str) -> AsyncIterator[AsyncEngine]:
-    engine = create_async_engine(postgres_url, pool_size=2, max_overflow=0)
+    engine = create_async_engine(postgres_url, pool_size=8, max_overflow=0)
     yield engine
     await engine.dispose()
 
@@ -370,7 +408,7 @@ async def test_provider_is_called_without_holding_a_db_connection(
 ) -> None:
     # Una transacción abierta durante la llamada (hasta 8 s) dejaría la conexión
     # "idle in transaction" y rompería las transacciones cortas del ADR 0004.
-    probe = _PoolProbe([_off("5449000000996", "Coca-Cola")], cast(QueuePool, pooled_engine.pool))
+    probe = _PoolProbe([_coca_cola()], cast(QueuePool, pooled_engine.pool))
     async with AsyncSession(pooled_engine, expire_on_commit=False) as session:
         await _lookup_found(session, probe, committed_user, test_settings, code="5449000000996")
         result = await _search(session, probe, committed_user, "coca cola", 5)
@@ -385,7 +423,7 @@ async def test_writing_before_calling_the_provider_is_a_programming_error(
     """El rollback previo a la llamada perdería la escritura: debe tronar (500)."""
     user_id = await _user(db_session)
     await db_session.commit()
-    provider = FakeFoodDataProvider(products=[_off()])
+    provider = FakeFoodDataProvider(products=[_nutella()])
 
     # Escritura por flush (ORM).
     await service.create_custom(
@@ -526,13 +564,13 @@ async def test_search_never_degrades_a_scanned_product(
 ) -> None:
     user_id = await _user(db_session)
     scanned = await _lookup_found(
-        db_session, FakeFoodDataProvider(products=[_off()]), user_id, test_settings
+        db_session, FakeFoodDataProvider(products=[_nutella()]), user_id, test_settings
     )
     before = await db_session.get(Product, scanned.id)
     assert before is not None
     fetched_at = before.fetched_at
 
-    poorer = FakeFoodDataProvider(products=[_off(complete=False, name="Nutella (OFF search)")])
+    poorer = FakeFoodDataProvider(products=[_nutella(complete=False, name="Nutella (OFF search)")])
     await _search(db_session, poorer, user_id, "nutella", 5)
 
     product = await db_session.get(Product, scanned.id)
@@ -549,9 +587,9 @@ async def test_search_touches_identical_data(
     user_id = await _user(db_session)
     old = datetime.now(UTC) - timedelta(days=5)
     scanned = await _lookup_found(
-        db_session, FakeFoodDataProvider(products=[_off()]), user_id, test_settings, now=old
+        db_session, FakeFoodDataProvider(products=[_nutella()]), user_id, test_settings, now=old
     )
-    await service._upsert_from_search(db_session, [_off()], datetime.now(UTC))
+    await service._upsert_from_search(db_session, [_nutella()], datetime.now(UTC))
     product = await db_session.get(Product, scanned.id)
     assert product is not None
     assert product.fetched_at > old
@@ -560,17 +598,19 @@ async def test_search_touches_identical_data(
 
 async def test_search_keeps_richer_search_data_and_fills_poorer(db_session: AsyncSession) -> None:
     now = datetime.now(UTC)
-    await service._upsert_from_search(db_session, [_off()], now)
-    await service._upsert_from_search(db_session, [_off(complete=False)], now)
+    await service._upsert_from_search(db_session, [_nutella()], now)
+    await service._upsert_from_search(db_session, [_nutella(complete=False)], now)
     product = await db_session.scalar(select(Product).where(Product.external_id == NUTELLA_GTIN))
     assert product is not None
     assert product.protein_g == D("6.3")
 
-    await service._upsert_from_search(db_session, [_off("7501234567893", complete=False)], now)
-    await service._upsert_from_search(db_session, [_off("7501234567893")], now)
+    poor = _off("7501234567893", "Avena integral", nutrients=Nutrients(kcal=D(389)))
+    rich = _off("7501234567893", "Avena integral", nutrients=AVENA_NUTRIENTS)
+    await service._upsert_from_search(db_session, [poor], now)
+    await service._upsert_from_search(db_session, [rich], now)
     filled = await db_session.scalar(select(Product).where(Product.external_id == "07501234567893"))
     assert filled is not None
-    assert filled.protein_g == D("6.3")
+    assert filled.protein_g == D("16.9")
 
 
 # --- CRUD de custom ---

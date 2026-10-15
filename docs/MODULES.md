@@ -43,8 +43,8 @@ No se permiten ciclos. Si aparece uno, el diseño está mal: se discute antes de
 **Responsabilidad**: catálogo de alimentos con su información nutrimental. Incluye escaneo por código de barras, búsqueda por texto y productos custom. Decisiones en ADR 0006.
 
 **Tablas**
-- `products` (caché global de OFF y USDA; no sincronizable, nunca se borra): `id, source (off|usda), source_type (dataType de USDA), external_id, barcode (GTIN-14, unique, nullable), name, brand, source_url, basis (per_100g|per_100ml), kcal, protein_g, carbs_g, fat_g, fiber_g, sugar_g, sodium_mg, extra_nutrients (jsonb), serving_quantity, serving_unit (g|ml), quality_flags (text[]), search_aliases, search_text (generada), fetched_via (barcode|search), fetched_at, created_at, updated_at`
-  - Unique `(source, external_id)`. Solo OFF guarda `barcode`, y su `external_id` es ese mismo GTIN-14 (CHECK `barcode_only_off`).
+- `products` (caché global de OFF y USDA; no sincronizable, nunca se borra): `id, source (off|usda), source_type (dataType de USDA), external_id, barcode (GTIN-14, nullable, índice no único), name, brand, source_url, basis (per_100g|per_100ml), kcal, protein_g, carbs_g, fat_g, fiber_g, sugar_g, sodium_mg, extra_nutrients (jsonb), serving_quantity, serving_unit (g|ml), quality_flags (text[]), search_aliases, search_text (generada), fetched_via (barcode|search), fetched_at, created_at, updated_at`
+  - Unique `(source, external_id)`. Solo OFF guarda `barcode`, y su `external_id` es ese mismo GTIN-14 (CHECK `barcode_only_off`); juntos garantizan que `barcode` es único sin un segundo índice único, que rompería el `ON CONFLICT` (ADR 0006, D5).
 - `user_products` (sincronizable): `id (acepta id del cliente), user_id, base_product_id (nullable), name, brand, barcode (GTIN-14), basis, <nutrientes>, extra_nutrients, serving_quantity, serving_unit, density_g_per_ml, unit_weight_g, search_text (generada), created_at, updated_at, deleted_at`
   - Únicos parciales (solo filas activas): `(user_id, barcode)` y `(user_id, base_product_id)`.
 - `product_barcode_misses`: `barcode (PK), checked_at`. Caché negativa.
