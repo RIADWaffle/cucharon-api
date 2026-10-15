@@ -40,26 +40,36 @@ No se permiten ciclos. Si aparece uno, el diseño está mal: se discute antes de
 
 ## products
 
-**Responsabilidad**: catálogo de alimentos con su información nutrimental. Incluye escaneo por código de barras, búsqueda por texto y productos custom.
+**Responsabilidad**: catálogo de alimentos con su información nutrimental. Incluye escaneo por código de barras, búsqueda por texto y productos custom. Decisiones en ADR 0006.
 
 **Tablas**
-- `products` (catálogo global, caché de providers): `id, source (off|usda), external_id, barcode (unique, nullable), name, brand, serving_size_g, nutrients_per_100g (columnas), extra_nutrients (jsonb), fetched_at`
-- `user_products` (sincronizable): `id, user_id, base_product_id (nullable), name, brand, barcode, serving_size_g, density_g_per_ml, unit_weight_g, nutrients_per_100g, ... + columnas estándar`
+- `products` (caché global de OFF y USDA; no sincronizable, nunca se borra): `id, source (off|usda), source_type (dataType de USDA), external_id, barcode (GTIN-14, unique, nullable), name, brand, source_url, basis (per_100g|per_100ml), kcal, protein_g, carbs_g, fat_g, fiber_g, sugar_g, sodium_mg, extra_nutrients (jsonb), serving_quantity, serving_unit (g|ml), quality_flags (text[]), search_aliases, search_text (generada), fetched_via (barcode|search), fetched_at, created_at, updated_at`
+  - Unique `(source, external_id)`. Solo OFF guarda `barcode`, y su `external_id` es ese mismo GTIN-14 (CHECK `barcode_only_off`).
+- `user_products` (sincronizable): `id (acepta id del cliente), user_id, base_product_id (nullable), name, brand, barcode (GTIN-14), basis, <nutrientes>, extra_nutrients, serving_quantity, serving_unit, density_g_per_ml, unit_weight_g, search_text (generada), created_at, updated_at, deleted_at`
+  - Únicos parciales (solo filas activas): `(user_id, barcode)` y `(user_id, base_product_id)`.
+- `product_barcode_misses`: `barcode (PK), checked_at`. Caché negativa.
 
-Si `base_product_id` está presente, es un **override** del producto global (p. ej. porque OFF tiene datos incorrectos). Las búsquedas del usuario priorizan sus overrides.
+Si `base_product_id` está presente, es un **override** del producto global (p. ej. porque OFF tiene datos incorrectos): al crearlo se copia el producto base y se aplican los cambios. Las búsquedas y escaneos del usuario muestran su override en lugar del producto base.
 
-Nutrientes principales como columnas: `kcal, protein_g, carbs_g, fat_g, fiber_g, sugar_g, sodium_mg`. El resto va en `extra_nutrients`.
+Nutrientes principales como columnas: `kcal, protein_g, carbs_g, fat_g, fiber_g, sugar_g, sodium_mg`, **por 100 g o por 100 ml según `basis`**. `carbs_g` son carbohidratos **disponibles** (sin fibra), como OFF y la NOM-051. El resto va en `extra_nutrients`.
 
-**Endpoints**
-- `GET /products/barcode/{code}`: busca en override del usuario → caché local → provider. Si lo encuentra en provider, lo guarda en caché. Si no existe en ningún lado, responde 404 para que el cliente ofrezca crear uno custom.
-- `GET /products/search?q=`
-- `POST /products/custom`, `PATCH /products/custom/{id}`, `DELETE ...`
+**Endpoints** (todos requieren auth)
+- `GET /products/barcode/{code}`: UPC-A, EAN-8, EAN-13 o GTIN-14 con dígito verificador válido (si no, 422 sin llamar al provider). Orden: override/custom del usuario → caché fresca → caché negativa → provider. Si lo encuentra en el provider, lo guarda (`ON CONFLICT`). Si no existe en ningún lado, responde 404 para que el cliente ofrezca crear uno custom. Si el provider falla, regresa la copia vieja (`stale: true`) o 503 con `Retry-After`.
+- `GET /products/search?q=&limit=`: productos del usuario y caché local primero (sin acentos, trigramas); OFF y USDA solo si lo local no alcanza. Responde `{items, partial}`.
+- `POST /products/custom`, `GET|PATCH|DELETE /products/custom/{id}` (borrado lógico)
+- `GET /products/{id}`: producto de la caché global (lo usan recetas).
+
+**API pública**: `get_product(session, id)`, `normalize_gtin`, `NutrientBasis`, `ServingUnit`, `ProductView`.
 
 **Usa**: `FoodDataProvider`.
 
 **Reglas**
-- Los datos de proveedores vienen incompletos con frecuencia. Si falta `kcal`, se marca `nutrition_complete=false` y no se inventan valores.
-- Los valores se normalizan a 100 g dentro del provider, no en el módulo.
+- Los datos de proveedores vienen incompletos con frecuencia. `nutrition_complete` exige kcal, proteína, carbohidratos y grasa; lo que falta queda `null`, no se inventa.
+- Los valores se normalizan a 100 g / 100 ml dentro del provider, no en el módulo.
+- **Nunca se asume una densidad.** Convertir g ↔ ml solo es posible con `density_g_per_ml` del usuario. Impacta recipes y metrics (ADR 0006, D9): sus cantidades deben ir en la unidad de la base del producto.
+- Los datos sospechosos se marcan en `quality_flags`; no se corrigen.
+- Una búsqueda nunca degrada la caché: no sobrescribe datos de un escaneo ni datos más completos (`domain.search_upsert_action`).
+- Rate limit por usuario en barcode y search (pueden pegarle a APIs externas con cuota compartida).
 
 ---
 
@@ -148,9 +158,11 @@ Cada provider tiene `base.py` (Protocol + tipos propios), implementaciones y `fa
 - Config: `LLM_PROVIDER, LLM_BASE_URL, LLM_API_KEY, LLM_MODEL`
 
 ### food_data: `FoodDataProvider`
-- `get_by_barcode(code) -> ProductData | None`, `search(query, limit) -> list[ProductData]`
-- Implementaciones: `OpenFoodFactsProvider` (barcode y búsqueda) y `UsdaProvider` (alimentos genéricos).
-- `ChainedFoodDataProvider([...])` prueba en orden.
+- `get_by_barcode(gtin14) -> ProductData | None`, `search(query, limit) -> SearchResult(items, unavailable_sources)`
+- Implementaciones: `OpenFoodFactsProvider` (barcode y búsqueda; API v3.4 fijada) y `UsdaProvider` (alimentos genéricos; no resuelve códigos; glosario ES→EN para consultas en español).
+- `ChainedFoodDataProvider([...])` prueba en orden (barcode) o en paralelo (search). Pasa al siguiente con `None`, `ProviderUnavailableError` o `ProviderBadDataError`; un `ProviderError` (bug o config) sube.
+- Un solo `httpx.AsyncClient` (lifespan) con timeouts, User-Agent con contacto y cuota saliente por proveedor (`OutboundBudget`).
+- Config: `FOOD_DATA_PROVIDERS, FOOD_DATA_CONTACT_EMAIL, OFF_*, USDA_*` (ver `.env.example` y ADR 0006).
 
 ### storage: `StorageProvider`
 - `presign_upload(key, content_type, max_bytes)`, `presign_download(key)`, `delete(key)`

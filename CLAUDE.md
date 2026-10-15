@@ -73,6 +73,11 @@ modules/<name>/
 
 - Las relaciones se declaran con `lazy="raise"` y se cargan con `selectinload` explícito. Lazy loading en async truena.
 - Un commit por request dentro de `get_session`, con rollback si hay excepción. Los services no hacen commit, solo `flush` cuando necesitan IDs.
+- Nunca escribas y luego lances una excepción de dominio esperando que la escritura
+  persista: get_session hace rollback. Si un error necesita persistir algo, hay dos
+  salidas válidas: (a) el service regresa un resultado y el router arma la respuesta
+  de error (ADR 0006), o (b) commit explícito con comentario que apunte al ADR antes
+  de lanzar (único caso hoy: reuso de refresh token, ADR 0002). Prefiere (a).
 - No llames código bloqueante dentro de rutas async (`requests`, SDKs sync, `time.sleep`).
 - Usa `alembic revision --autogenerate` y **revisa la migración antes de aplicarla**. Nunca edites una migración que ya se aplicó.
 
