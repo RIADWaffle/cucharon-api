@@ -7,6 +7,7 @@ from app.core.errors import (
     ForbiddenError,
     NotFoundError,
     RateLimitedError,
+    ServiceUnavailableError,
     UnauthorizedError,
     status_for,
 )
@@ -21,6 +22,7 @@ from app.core.errors import (
         (ForbiddenError(), 403),
         (DomainValidationError(), 422),
         (RateLimitedError(), 429),
+        (ServiceUnavailableError(retry_after=3), 503),
         (DomainError(), 400),
     ],
 )

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Annotated, Any, ClassVar
 
 from fastapi import Depends, Request
-from sqlalchemy import DateTime, MetaData, func
+from sqlalchemy import DateTime, MetaData, event, func
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
@@ -13,7 +13,15 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    ORMExecuteState,
+    Session,
+    SessionTransaction,
+    UOWTransaction,
+    mapped_column,
+)
 
 from app.core.config import Settings
 
@@ -57,6 +65,37 @@ def create_sessionmaker(
     bind: AsyncEngine | AsyncConnection, **kwargs: Any
 ) -> async_sessionmaker[AsyncSession]:
     return async_sessionmaker(bind, expire_on_commit=False, **kwargs)
+
+
+# --- marca de escrituras en la transacción actual ---
+# Para código que cierra la transacción de lectura con rollback antes de un IO lento
+# (p. ej. products antes de llamar al provider): si ya hubo escrituras, el rollback
+# las perdería en silencio. Ver ADR 0006.
+_WRITES_KEY = "has_writes"
+
+
+@event.listens_for(Session, "after_flush")
+def _mark_flush(session: Session, flush_context: UOWTransaction) -> None:
+    session.info[_WRITES_KEY] = True
+
+
+@event.listens_for(Session, "do_orm_execute")
+def _mark_dml(state: ORMExecuteState) -> None:
+    # `session.execute(...)` no pasa por flush. Todo lo que no es SELECT cuenta como
+    # escritura, incluido `text(...)` (conservador: un SELECT crudo también cuenta).
+    if not state.is_select:
+        state.session.info[_WRITES_KEY] = True
+
+
+@event.listens_for(Session, "after_transaction_end")
+def _reset_writes(session: Session, transaction: SessionTransaction) -> None:
+    if transaction.parent is None:  # solo la transacción raíz, no savepoints
+        session.info.pop(_WRITES_KEY, None)
+
+
+def has_writes(session: AsyncSession) -> bool:
+    """¿La transacción actual escribió algo (flush o DML) o tiene cambios pendientes?"""
+    return bool(session.info.get(_WRITES_KEY) or session.new or session.dirty or session.deleted)
 
 
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:

@@ -1,3 +1,4 @@
+import math
 from typing import Any, ClassVar, cast
 
 import structlog
@@ -53,6 +54,17 @@ class RateLimitedError(DomainError):
     default_message = "Demasiadas solicitudes, intenta más tarde"
 
 
+class ServiceUnavailableError(DomainError):
+    """Una dependencia externa no responde. `retry_after` (s) va al header Retry-After."""
+
+    code = "service_unavailable"
+    default_message = "Servicio no disponible, intenta más tarde"
+
+    def __init__(self, message: str | None = None, *, retry_after: float | None = None) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
 _STATUS_BY_TYPE: list[tuple[type[DomainError], int]] = [
     (NotFoundError, status.HTTP_404_NOT_FOUND),
     (ConflictError, status.HTTP_409_CONFLICT),
@@ -60,6 +72,7 @@ _STATUS_BY_TYPE: list[tuple[type[DomainError], int]] = [
     (ForbiddenError, status.HTTP_403_FORBIDDEN),
     (DomainValidationError, status.HTTP_422_UNPROCESSABLE_CONTENT),
     (RateLimitedError, status.HTTP_429_TOO_MANY_REQUESTS),
+    (ServiceUnavailableError, status.HTTP_503_SERVICE_UNAVAILABLE),
 ]
 
 
@@ -98,8 +111,12 @@ def status_for(exc: DomainError) -> int:
 async def _domain_error_handler(_: Request, exc: Exception) -> JSONResponse:
     exc = cast(DomainError, exc)
     status_code = status_for(exc)
-    headers = {"WWW-Authenticate": "Bearer"} if status_code == 401 else None
-    return error_response(status_code, exc.code, exc.message, headers=headers)
+    headers: dict[str, str] = {}
+    if status_code == 401:
+        headers["WWW-Authenticate"] = "Bearer"
+    if isinstance(exc, ServiceUnavailableError) and exc.retry_after is not None:
+        headers["Retry-After"] = str(max(1, math.ceil(exc.retry_after)))
+    return error_response(status_code, exc.code, exc.message, headers=headers or None)
 
 
 async def _validation_error_handler(_: Request, exc: Exception) -> JSONResponse:
