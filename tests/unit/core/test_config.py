@@ -1,3 +1,5 @@
+from typing import get_args
+
 import pytest
 from pydantic import SecretStr, ValidationError
 
@@ -58,3 +60,42 @@ def test_settings_reject_reused_key_for_refresh_derivation() -> None:
             jwt_secret=SecretStr("same"),
             refresh_derivation_key=SecretStr("same"),
         )
+
+
+def _food_settings(**fields: object) -> Settings:
+    return IsolatedSettings(
+        database_url="postgresql://u:p@localhost/db",
+        jwt_secret=SecretStr("x"),
+        refresh_derivation_key=SecretStr("y"),
+        **fields,  # pyright: ignore[reportArgumentType]
+    )
+
+
+def test_empty_food_data_providers_only_allowed_in_local_and_test() -> None:
+    # Allowlist: todo ENV fuera de {local, test} exige providers.
+    for env in get_args(Settings.model_fields["env"].annotation):
+        if env in ("local", "test"):
+            assert _food_settings(env=env, food_data_providers="").food_data_providers == []
+        else:
+            with pytest.raises(ValidationError, match="FOOD_DATA_PROVIDERS"):
+                _food_settings(env=env, food_data_providers="")
+    ok = _food_settings(
+        env="production", food_data_providers="off", food_data_contact_email="a@b.c"
+    )
+    assert ok.food_data_providers == ["off"]
+
+
+def test_unknown_env_fails_at_startup() -> None:
+    with pytest.raises(ValidationError):
+        _food_settings(env="staging")
+
+
+def test_off_requires_contact_email() -> None:
+    with pytest.raises(ValidationError, match="FOOD_DATA_CONTACT_EMAIL"):
+        _food_settings(food_data_providers="off,usda")
+
+
+def test_demo_key_only_in_local() -> None:
+    assert _food_settings(usda_api_key=SecretStr("DEMO_KEY")).usda_api_key is not None
+    with pytest.raises(ValidationError, match="DEMO_KEY"):
+        _food_settings(env="test", usda_api_key=SecretStr("DEMO_KEY"))

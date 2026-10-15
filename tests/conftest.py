@@ -16,6 +16,8 @@ from pathlib import Path
 os.environ.setdefault("DATABASE_URL", "postgresql://unused:unused@localhost:1/unused")
 os.environ.setdefault("JWT_SECRET", "test-secret")
 os.environ.setdefault("REFRESH_DERIVATION_KEY", "test-refresh-key")
+# Sin providers externos: no depender del .env local (que puede pedir más config).
+os.environ["FOOD_DATA_PROVIDERS"] = ""
 
 import httpx
 import pytest

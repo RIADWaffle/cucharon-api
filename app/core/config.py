@@ -4,7 +4,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from fastapi import Depends, Request
 from pydantic import SecretStr, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # Parámetros de libpq que asyncpg no entiende como query string.
 _LIBPQ_ONLY_PARAMS = {"sslmode", "channel_binding"}
@@ -35,6 +35,9 @@ def normalize_database_url(url: str) -> tuple[str, dict[str, Any]]:
 
     normalized = urlunsplit((scheme, parts.netloc, parts.path, urlencode(kept), parts.fragment))
     return normalized, connect_args
+
+
+_ENVS_WITHOUT_FOOD_DATA = frozenset({"local", "test"})
 
 
 class Settings(BaseSettings):
@@ -76,7 +79,29 @@ class Settings(BaseSettings):
     llm_api_key: SecretStr | None = None
     llm_model: str | None = None
 
-    food_data_provider: str | None = None
+    # --- food data (ADR 0006) ---
+    # Orden de la cadena, separado por comas ("off,usda"). Vacío = sin providers
+    # externos: solo caché local y productos del usuario.
+    food_data_providers: Annotated[list[Literal["off", "usda"]], NoDecode] = []
+    # OFF exige un User-Agent "AppName/Version (ContactEmail)".
+    food_data_contact_email: str | None = None
+    # Tiempo máximo total de una llamada a un provider (connect + lectura + cola).
+    food_data_timeout_seconds: float = 8.0
+    off_base_url: str = "https://world.openfoodfacts.org"
+    # Cuotas SALIENTES (todas las requests salen de la misma IP). Límites oficiales
+    # de OFF: 15/min lecturas de producto, 10/min búsquedas.
+    off_rate_limit_product: str = "15/minute"
+    off_rate_limit_search: str = "10/minute"
+    usda_base_url: str = "https://api.nal.usda.gov/fdc/v1"
+    # Sin key, USDA queda desactivado. DEMO_KEY solo con ENV=local.
+    usda_api_key: SecretStr | None = None
+    # Oficial: 1000/hora por key, y excederlo bloquea la key 1 h. Se deja margen.
+    usda_rate_limit: str = "900/hour"
+    products_cache_ttl_days: int = 30
+    products_miss_ttl_hours: int = 72
+    # Por usuario, en los endpoints que pueden pegarle a una API externa.
+    rate_limit_products_barcode: str = "30/minute"
+    rate_limit_products_search: str = "15/minute"
 
     storage_provider: Literal["local"] = "local"
     storage_local_dir: str = ".storage"
@@ -91,6 +116,26 @@ class Settings(BaseSettings):
             raise ValueError("Usa la URL directa de Neon (sin '-pooler'); ver config.py")
         normalize_database_url(value)
         return value
+
+    @field_validator("food_data_providers", mode="before")
+    @classmethod
+    def _split_providers(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [part.strip() for part in value.split(",") if part.strip()]
+        return value
+
+    @model_validator(mode="after")
+    def _validate_food_data(self) -> Self:
+        # Sin providers el escaneo de códigos nuevos siempre da 503. Allowlist: solo
+        # desarrollo y la suite (que usa fakes); cualquier otro ENV falla al arrancar.
+        if not self.food_data_providers and self.env not in _ENVS_WITHOUT_FOOD_DATA:
+            raise ValueError(f"FOOD_DATA_PROVIDERS no puede estar vacío con ENV={self.env}")
+        if "off" in self.food_data_providers and not self.food_data_contact_email:
+            raise ValueError("FOOD_DATA_CONTACT_EMAIL es obligatorio con el provider 'off'")
+        key = self.usda_api_key.get_secret_value() if self.usda_api_key else None
+        if key == "DEMO_KEY" and self.env != "local":
+            raise ValueError("USDA_API_KEY=DEMO_KEY solo se permite con ENV=local")
+        return self
 
     @model_validator(mode="after")
     def _require_distinct_keys(self) -> Self:

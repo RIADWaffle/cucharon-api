@@ -1,0 +1,54 @@
+{
+  "code": "3017620422003",
+  "errors": [],
+  "product": {
+    "brands": "Nutella, Ferrero",
+    "categories_tags": [
+      "en:breakfasts",
+      "en:spreads",
+      "en:sweet-spreads",
+      "en:confectionary-based-spreads"
+    ],
+    "code": "3017620422003",
+    "generic_name_es": "Crema de Avellanas con cacao",
+    "lang": "fr",
+    "nutriments": {
+      "carbohydrates_100g": 57.5,
+      "carbohydrates_unit": "g",
+      "energy-kj_100g": 2252,
+      "energy-kj_unit": "kJ",
+      "energy_100g": 2252,
+      "energy_unit": "kJ",
+      "fat_100g": 30.9,
+      "fat_unit": "g",
+      "fiber_100g": 0,
+      "fiber_unit": "g",
+      "proteins_100g": 6.3,
+      "proteins_unit": "g",
+      "salt_100g": 0.107,
+      "salt_unit": "g",
+      "saturated-fat_100g": 10.6,
+      "saturated-fat_unit": "g",
+      "sodium_100g": 0.0428,
+      "sodium_unit": "g",
+      "sugars_100g": 56.3,
+      "sugars_unit": "g"
+    },
+    "nutrition_data": "on",
+    "nutrition_data_per": "100g",
+    "nutrition_data_prepared_per": "100g",
+    "product_name": "Nutella",
+    "product_name_es": "Nutella",
+    "product_quantity": 400,
+    "product_quantity_unit": "g",
+    "quantity": "400 g e",
+    "serving_quantity_unit": "g"
+  },
+  "result": {
+    "id": "product_found",
+    "lc_name": "Product found",
+    "name": "Product found"
+  },
+  "status": "success",
+  "warnings": []
+}

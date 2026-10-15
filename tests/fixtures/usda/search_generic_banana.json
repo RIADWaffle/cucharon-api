@@ -1,0 +1,266 @@
+{
+  "currentPage": 1,
+  "foods": [
+    {
+      "dataType": "Survey (FNDDS)",
+      "description": "Banana, raw",
+      "fdcId": 2709224,
+      "foodNutrients": [
+        {
+          "nutrientId": 1003,
+          "nutrientName": "Protein",
+          "nutrientNumber": "203",
+          "unitName": "G",
+          "value": 0.74
+        },
+        {
+          "nutrientId": 1004,
+          "nutrientName": "Total lipid (fat)",
+          "nutrientNumber": "204",
+          "unitName": "G",
+          "value": 0.28
+        },
+        {
+          "nutrientId": 1005,
+          "nutrientName": "Carbohydrate, by difference",
+          "nutrientNumber": "205",
+          "unitName": "G",
+          "value": 22.71
+        },
+        {
+          "nutrientId": 1008,
+          "nutrientName": "Energy",
+          "nutrientNumber": "208",
+          "unitName": "KCAL",
+          "value": 97
+        },
+        {
+          "nutrientId": 2000,
+          "nutrientName": "Total Sugars",
+          "nutrientNumber": "269",
+          "unitName": "G",
+          "value": 15.8
+        },
+        {
+          "nutrientId": 1079,
+          "nutrientName": "Fiber, total dietary",
+          "nutrientNumber": "291",
+          "unitName": "G",
+          "value": 1.7
+        },
+        {
+          "nutrientId": 1087,
+          "nutrientName": "Calcium, Ca",
+          "nutrientNumber": "301",
+          "unitName": "MG",
+          "value": 5
+        },
+        {
+          "nutrientId": 1093,
+          "nutrientName": "Sodium, Na",
+          "nutrientNumber": "307",
+          "unitName": "MG",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "dataType": "SR Legacy",
+      "description": "Bananas, raw",
+      "fdcId": 173944,
+      "foodNutrients": [
+        {
+          "nutrientId": 1062,
+          "nutrientName": "Energy",
+          "nutrientNumber": "268",
+          "unitName": "kJ",
+          "value": 371
+        },
+        {
+          "nutrientId": 1005,
+          "nutrientName": "Carbohydrate, by difference",
+          "nutrientNumber": "205",
+          "unitName": "G",
+          "value": 22.8
+        },
+        {
+          "nutrientId": 1008,
+          "nutrientName": "Energy",
+          "nutrientNumber": "208",
+          "unitName": "KCAL",
+          "value": 89.0
+        },
+        {
+          "nutrientId": 1079,
+          "nutrientName": "Fiber, total dietary",
+          "nutrientNumber": "291",
+          "unitName": "G",
+          "value": 2.6
+        },
+        {
+          "nutrientId": 1093,
+          "nutrientName": "Sodium, Na",
+          "nutrientNumber": "307",
+          "unitName": "MG",
+          "value": 1.0
+        },
+        {
+          "nutrientId": 1003,
+          "nutrientName": "Protein",
+          "nutrientNumber": "203",
+          "unitName": "G",
+          "value": 1.09
+        },
+        {
+          "nutrientId": 2000,
+          "nutrientName": "Total Sugars",
+          "nutrientNumber": "269",
+          "unitName": "G",
+          "value": 12.2
+        },
+        {
+          "nutrientId": 1087,
+          "nutrientName": "Calcium, Ca",
+          "nutrientNumber": "301",
+          "unitName": "MG",
+          "value": 5.0
+        },
+        {
+          "nutrientId": 1004,
+          "nutrientName": "Total lipid (fat)",
+          "nutrientNumber": "204",
+          "unitName": "G",
+          "value": 0.33
+        }
+      ]
+    },
+    {
+      "dataType": "Foundation",
+      "description": "Bananas, overripe, raw",
+      "fdcId": 1105073,
+      "foodNutrients": [
+        {
+          "nutrientId": 1004,
+          "nutrientName": "Total lipid (fat)",
+          "nutrientNumber": "204",
+          "unitName": "G",
+          "value": 0.22
+        },
+        {
+          "nutrientId": 1079,
+          "nutrientName": "Fiber, total dietary",
+          "nutrientNumber": "291",
+          "unitName": "G",
+          "value": 1.7
+        },
+        {
+          "nutrientId": 1003,
+          "nutrientName": "Protein",
+          "nutrientNumber": "203",
+          "unitName": "G",
+          "value": 0.73
+        },
+        {
+          "nutrientId": 1005,
+          "nutrientName": "Carbohydrate, by difference",
+          "nutrientNumber": "205",
+          "unitName": "G",
+          "value": 20.1
+        },
+        {
+          "nutrientId": 1008,
+          "nutrientName": "Energy",
+          "nutrientNumber": "208",
+          "unitName": "KCAL",
+          "value": 85.0
+        },
+        {
+          "nutrientId": 1062,
+          "nutrientName": "Energy",
+          "nutrientNumber": "268",
+          "unitName": "kJ",
+          "value": 357
+        },
+        {
+          "nutrientId": 1063,
+          "nutrientName": "Sugars, Total",
+          "nutrientNumber": "269.3",
+          "unitName": "G",
+          "value": 15.8
+        }
+      ]
+    },
+    {
+      "dataType": "SR Legacy",
+      "description": "Pepper, banana, raw",
+      "fdcId": 169394,
+      "foodNutrients": [
+        {
+          "nutrientId": 1079,
+          "nutrientName": "Fiber, total dietary",
+          "nutrientNumber": "291",
+          "unitName": "G",
+          "value": 3.4
+        },
+        {
+          "nutrientId": 1093,
+          "nutrientName": "Sodium, Na",
+          "nutrientNumber": "307",
+          "unitName": "MG",
+          "value": 13.0
+        },
+        {
+          "nutrientId": 1003,
+          "nutrientName": "Protein",
+          "nutrientNumber": "203",
+          "unitName": "G",
+          "value": 1.66
+        },
+        {
+          "nutrientId": 1004,
+          "nutrientName": "Total lipid (fat)",
+          "nutrientNumber": "204",
+          "unitName": "G",
+          "value": 0.45
+        },
+        {
+          "nutrientId": 1087,
+          "nutrientName": "Calcium, Ca",
+          "nutrientNumber": "301",
+          "unitName": "MG",
+          "value": 14.0
+        },
+        {
+          "nutrientId": 1005,
+          "nutrientName": "Carbohydrate, by difference",
+          "nutrientNumber": "205",
+          "unitName": "G",
+          "value": 5.35
+        },
+        {
+          "nutrientId": 2000,
+          "nutrientName": "Total Sugars",
+          "nutrientNumber": "269",
+          "unitName": "G",
+          "value": 1.95
+        },
+        {
+          "nutrientId": 1008,
+          "nutrientName": "Energy",
+          "nutrientNumber": "208",
+          "unitName": "KCAL",
+          "value": 27.0
+        },
+        {
+          "nutrientId": 1062,
+          "nutrientName": "Energy",
+          "nutrientNumber": "268",
+          "unitName": "kJ",
+          "value": 113
+        }
+      ]
+    }
+  ],
+  "totalHits": 1775,
+  "totalPages": 444
+}

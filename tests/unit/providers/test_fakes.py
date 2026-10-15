@@ -46,19 +46,27 @@ async def test_fake_llm_chat() -> None:
 async def test_fake_food_data() -> None:
     avena = ProductData(
         source="off",
-        external_id="1",
+        external_id="7501000000001",
         name="Avena integral",
-        barcode="750100",
-        nutrients_per_100g=Nutrients(kcal=Decimal(389)),
+        basis="per_100g",
+        barcode="7501000000001",
+        nutrients=Nutrients(
+            kcal=Decimal(389), protein_g=Decimal(17), carbs_g=Decimal(56), fat_g=Decimal(7)
+        ),
     )
     food = FakeFoodDataProvider(products=[avena])
-    assert await food.get_by_barcode("750100") is avena
-    assert await food.get_by_barcode("000") is None
-    assert await food.search("AVENA") == [avena]
+    assert await food.get_by_barcode("07501000000001") is avena
+    assert await food.get_by_barcode("00000000000000") is None
+    assert (await food.search("AVENA")).items == [avena]
     assert avena.nutrition_complete
-    assert not ProductData(
-        source="usda", external_id="2", name="x", nutrients_per_100g=Nutrients()
-    ).nutrition_complete
+    only_kcal = ProductData(
+        source="usda",
+        external_id="2",
+        name="x",
+        basis="per_100g",
+        nutrients=Nutrients(kcal=Decimal(10)),
+    )
+    assert not only_kcal.nutrition_complete
 
 
 async def test_fake_storage() -> None:

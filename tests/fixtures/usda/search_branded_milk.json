@@ -1,0 +1,211 @@
+{
+  "currentPage": 1,
+  "foods": [
+    {
+      "brandName": "GOOD & GATHER",
+      "brandOwner": "Target Stores",
+      "dataType": "Branded",
+      "description": "WHOLE MILK",
+      "fdcId": 2642521,
+      "foodNutrients": [
+        {
+          "nutrientId": 1003,
+          "nutrientName": "Protein",
+          "nutrientNumber": "203",
+          "unitName": "G",
+          "value": 3.33
+        },
+        {
+          "nutrientId": 1004,
+          "nutrientName": "Total lipid (fat)",
+          "nutrientNumber": "204",
+          "unitName": "G",
+          "value": 3.33
+        },
+        {
+          "nutrientId": 1005,
+          "nutrientName": "Carbohydrate, by difference",
+          "nutrientNumber": "205",
+          "unitName": "G",
+          "value": 5.0
+        },
+        {
+          "nutrientId": 1008,
+          "nutrientName": "Energy",
+          "nutrientNumber": "208",
+          "unitName": "KCAL",
+          "value": 62.0
+        },
+        {
+          "nutrientId": 2000,
+          "nutrientName": "Total Sugars",
+          "nutrientNumber": "269",
+          "unitName": "G",
+          "value": 5.0
+        },
+        {
+          "nutrientId": 1079,
+          "nutrientName": "Fiber, total dietary",
+          "nutrientNumber": "291",
+          "unitName": "G",
+          "value": 0.0
+        },
+        {
+          "nutrientId": 1087,
+          "nutrientName": "Calcium, Ca",
+          "nutrientNumber": "301",
+          "unitName": "MG",
+          "value": 117
+        },
+        {
+          "nutrientId": 1093,
+          "nutrientName": "Sodium, Na",
+          "nutrientNumber": "307",
+          "unitName": "MG",
+          "value": 44.0
+        }
+      ],
+      "gtinUpc": "085239983409",
+      "servingSize": 240.0,
+      "servingSizeUnit": "MLT"
+    },
+    {
+      "brandName": "LAND O LAKES",
+      "brandOwner": "Prairie Farms Dairy, Inc.",
+      "dataType": "Branded",
+      "description": "WHOLE MILK",
+      "fdcId": 2385707,
+      "foodNutrients": [
+        {
+          "nutrientId": 1003,
+          "nutrientName": "Protein",
+          "nutrientNumber": "203",
+          "unitName": "G",
+          "value": 3.33
+        },
+        {
+          "nutrientId": 1004,
+          "nutrientName": "Total lipid (fat)",
+          "nutrientNumber": "204",
+          "unitName": "G",
+          "value": 3.33
+        },
+        {
+          "nutrientId": 1005,
+          "nutrientName": "Carbohydrate, by difference",
+          "nutrientNumber": "205",
+          "unitName": "G",
+          "value": 4.58
+        },
+        {
+          "nutrientId": 1008,
+          "nutrientName": "Energy",
+          "nutrientNumber": "208",
+          "unitName": "KCAL",
+          "value": 62.0
+        },
+        {
+          "nutrientId": 2000,
+          "nutrientName": "Total Sugars",
+          "nutrientNumber": "269",
+          "unitName": "G",
+          "value": 4.58
+        },
+        {
+          "nutrientId": 1079,
+          "nutrientName": "Fiber, total dietary",
+          "nutrientNumber": "291",
+          "unitName": "G",
+          "value": 0.0
+        },
+        {
+          "nutrientId": 1087,
+          "nutrientName": "Calcium, Ca",
+          "nutrientNumber": "301",
+          "unitName": "MG",
+          "value": 83.0
+        },
+        {
+          "nutrientId": 1093,
+          "nutrientName": "Sodium, Na",
+          "nutrientNumber": "307",
+          "unitName": "MG",
+          "value": 50.0
+        }
+      ],
+      "gtinUpc": "072730213081",
+      "servingSize": 240.0,
+      "servingSizeUnit": "ml"
+    },
+    {
+      "brandName": "FRESHCHOICE",
+      "brandOwner": "Weis Markets, Inc.",
+      "dataType": "Branded",
+      "description": "WHOLE MILK",
+      "fdcId": 2102008,
+      "foodNutrients": [
+        {
+          "nutrientId": 1003,
+          "nutrientName": "Protein",
+          "nutrientNumber": "203",
+          "unitName": "G",
+          "value": 3.33
+        },
+        {
+          "nutrientId": 1004,
+          "nutrientName": "Total lipid (fat)",
+          "nutrientNumber": "204",
+          "unitName": "G",
+          "value": 3.33
+        },
+        {
+          "nutrientId": 1005,
+          "nutrientName": "Carbohydrate, by difference",
+          "nutrientNumber": "205",
+          "unitName": "G",
+          "value": 5.0
+        },
+        {
+          "nutrientId": 1008,
+          "nutrientName": "Energy",
+          "nutrientNumber": "208",
+          "unitName": "KCAL",
+          "value": 62.0
+        },
+        {
+          "nutrientId": 2000,
+          "nutrientName": "Total Sugars",
+          "nutrientNumber": "269",
+          "unitName": "G",
+          "value": 5.0
+        },
+        {
+          "nutrientId": 1079,
+          "nutrientName": "Fiber, total dietary",
+          "nutrientNumber": "291",
+          "unitName": "G",
+          "value": 0.0
+        },
+        {
+          "nutrientId": 1087,
+          "nutrientName": "Calcium, Ca",
+          "nutrientNumber": "301",
+          "unitName": "MG",
+          "value": 104
+        },
+        {
+          "nutrientId": 1093,
+          "nutrientName": "Sodium, Na",
+          "nutrientNumber": "307",
+          "unitName": "MG",
+          "value": 44.0
+        }
+      ],
+      "gtinUpc": "041497097524",
+      "servingSize": 240.0,
+      "servingSizeUnit": "ml"
+    }
+  ],
+  "totalHits": 164011,
+  "totalPages": 54671
+}
